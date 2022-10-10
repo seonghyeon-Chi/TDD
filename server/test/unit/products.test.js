@@ -8,7 +8,7 @@ let req, res, next;
 beforeEach(() => {
   req = httpMocks.createRequest();
   res = httpMocks.createResponse();
-  next = null;
+  next = jest.fn();
 })
 
 describe("Product Controller Create", () => {
@@ -19,8 +19,8 @@ describe("Product Controller Create", () => {
     // ProductController에 createProduct가 함수인지 파악함
     expect(typeof productController.createProduct).toBe("function");
   })
-  it("should call ProductModel.create", () => {
-    productController.createProduct(req, res, next);
+  it("should call ProductModel.create", async () => {
+    await productController.createProduct(req, res, next);
     // productController의 createProduct가 실행될때
     // productModel의 create가 호출되는지 확인
     // DB에 직접적인 영향을 받으면 안되기 때문에
@@ -28,15 +28,22 @@ describe("Product Controller Create", () => {
     expect(productModel.create).toBeCalledWith(newProduct);
   })
   // data를 성공적으로 create시 201
-  it("should return 201 respone code", () => {
-    productController.createProduct(req, res, next);
+  it("should return 201 respone code", async () => {
+    await productController.createProduct(req, res, next);
     expect(res.statusCode).toBe(201);
     expect(res._isEndCalled()).toBeTruthy();
   })
-  it("should return json body in response", () => {
+  it("should return json body in response", async () => {
     productModel.create.mockReturnValue(newProduct);
-    productController.createProduct(req, res, next);
+    await productController.createProduct(req, res, next);
     // res의 json data가 newProduct와 일치하는지 판단 여부
     expect(res._getJSONData()).toStrictEqual(newProduct)
+  })
+  it("should handle errors", async () => {
+    const errorMessage = {message: "description property missing"};
+    const rejectedPromise = Promise.reject(errorMessage);
+    productModel.create.mockReturnValue(rejectedPromise);
+    await productController.createProduct(req, res, next);
+    expect(next).toBeCalledWith(errorMessage);
   })
 })
